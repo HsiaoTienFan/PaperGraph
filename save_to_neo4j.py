@@ -4,6 +4,7 @@
 @author: Daniel Fan
 """
 
+import create_CQL_logic
 from neo4j.v1 import GraphDatabase
 
 
@@ -18,18 +19,6 @@ def connect_to_server():
     return graphDB_Driver
 
 
-def form_CQL(paper, ref):
-    # CQL to create a graph with current paper
-    cql_create = """
-    MATCH (n)
-    WITH n.name AS name, COLLECT(n) AS nodelist, COUNT(*) AS count
-    WHERE count > 1
-    CALL apoc.refactor.mergeNodes(nodelist) YIELD node
-    RETURN node
-    """
-    return cql_create
-
-
 def write_to_database(graphDB_Driver, cql_create):
 # Execute the CQL query
     with graphDB_Driver.session() as graphDB_Session:
@@ -38,7 +27,8 @@ def write_to_database(graphDB_Driver, cql_create):
         graphDB_Session.run(cql_create)
 
 
-def load_current_paper(paper, ref):
+def load_current_paper(paper, ref_list):
     graphDB_Driver = connect_to_server()
-    cql_create = form_CQL(paper, ref)
+    cql_create = create_CQL_logic.create_cql_for_paper_load(paper, ref_list)
     write_to_database(graphDB_Driver, cql_create)
+

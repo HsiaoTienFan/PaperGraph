@@ -1,0 +1,1 @@
+java -cp cermine-impl-1.14-jar-with-dependencies.jar pl.edu.icm.cermine.ContentExtractor -path ../data -outputs jats,bibtex
