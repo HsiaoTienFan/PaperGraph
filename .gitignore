@@ -209,3 +209,4 @@ reference/
 *.bibtex
 *.cermxml
 *.xml
+*.csv
