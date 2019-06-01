@@ -35,8 +35,7 @@ def extract_sections(tree):
     return sections
 
 
-def read_paper(i):
-    paper_file = glob.glob("data/*.cermxml")[i]
+def read_paper(paper_file):
     clean_paper(paper_file)
     tree = ET.parse(paper_file)
     year = tree.find(".//year").text
@@ -54,8 +53,7 @@ def read_paper(i):
     return paper
 
 
-def get_ref_list(i):
-    bibtex_file = glob.glob("data/*.bibtex")[i]
+def get_ref_list(bibtex_file):
     with open(bibtex_file, encoding="utf-8") as bibtex_file:
         bib_database = bibtexparser.load(bibtex_file)
     ref_list = bib_database.entries
@@ -63,11 +61,12 @@ def get_ref_list(i):
 
 
 def main():
-    for i in range(0,4):
-        ref_list = get_ref_list(i)
-        paper = read_paper(i)
-        save_to_neo4j.load_current_paper(paper, ref_list)
-        print(i)
+    bibtex_file = glob.glob("data/*.bibtex")[0]
+    paper_file = glob.glob("data/*.cermxml")[0]
+    ref_list = get_ref_list(bibtex_file)
+    paper = read_paper(paper_file)
+    save_to_neo4j.load_current_paper(paper, ref_list)
+
 
 
 

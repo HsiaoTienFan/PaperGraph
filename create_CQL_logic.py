@@ -24,38 +24,65 @@ def create_cql_for_paper_load(paper, ref_list):
 
 
 def creat_paper_cql(paper):
-    paper_key_list = list(paper.keys())
-    template = \
+    template_part1 = \
     """MERGE (article:Article{})
-    SET article.year = "{}"
-    SET article.title = "{}"
-    SET article.journal = "{}"
-    SET article.abstract = "{}"
-    SET article.pages = "{}"
-    SET article.loaded = "YES"
     """
-    properties = '{title:"' + paper[paper_key_list[1]] + '"}'
-    paper_cql = template.format(\
-    properties,\
-    paper[paper_key_list[0]],\
-    paper[paper_key_list[1]],\
-    paper[paper_key_list[2]],\
-    paper[paper_key_list[4]],\
-    paper[paper_key_list[6]])
+    template_part2 = \
+    """SET article.{} = "{}"
+    """
+    current_cql = ''
+    remove = ['author', 'title', 'sections', 'ENTRYTYPE', 'ID']
+    title = '{title:"' + paper['title'] + '"}'
+    filtered_paper_properties = {key:value for key, value in paper.items() if key not in remove}
+    for key, value in filtered_paper_properties.items():
+        current_cql += template_part2.format(key, value)
+    paper_cql = template_part1.format(title) + current_cql
+    return paper_cql
+
+
+def create_ref_cql(paper, ref):
+
+    template_part1 = \
+    """MERGE (article:Article{})
+    """
+    template_part2 = \
+    """SET article.{} = "{}"
+    """
+    current_cql = ''
+    remove = ['author', 'title', 'sections', 'ENTRYTYPE', 'ID']
+    paper_title = '{title:"' + paper['title'] + '"}'
+    ref_title = '{title:"' + ref['title'] + '"}'
+    filtered_paper_properties = {key:value for key, value in paper.items() if key not in remove}
+
+    match = \
+    """MATCH (source:Article{})
+    """.format(paper_title)
+    join = \
+    """MERGE (source)-[:REFERENCES]->(article)
+    """
+
+    for key, value in filtered_paper_properties.items():
+        current_cql += template_part2.format(key, value)
+    paper_cql = match + template_part1.format(ref_title) + current_cql + join
     return paper_cql
 
 
 def create_section_cql(paper):
-    template = \
-    """MERGE (section{}:Section{})
-        MERGE (article)-[:HAS_THIS_SECTION]->(section{})
+    template1 = """MATCH (article:Article{})
     """
-    section_cql = ''
+    template2 = \
+    """MERGE (section{}:Section{})
+MERGE (article)-[:HAS_THIS_SECTION]->(section{})
+
+    """
+    current_cql = ''
+    title = '{title:"' + paper['title'] + '"}'
     for count, (key, value) in enumerate(paper['sections'].items()):
-        properties = '{title:"' + key + '", content:"' + value + '"}'
-        section_cql += template.format(str(count),\
+        properties = '{section:"' + key + '", content:"' + value + '"}'
+        current_cql += template2.format(str(count),\
                                        properties,\
                                        str(count))
+    section_cql = template1.format(title) + current_cql
     return section_cql
 
 
@@ -79,60 +106,4 @@ def create_author_cql(full_name_list, article_key, ID):
                                        article_key,\
                                        ID+str(count))
     return author_cql
-
-
-def remove_outdated_authors():
-    outdated_authors = \
-    """MATCH (article)-[:WRITTEN_BY]->(outdated:author)
-        DELETE outdated
-    """
-    return outdated_authors
-
-
-def create_references_cql(ref_list):
-    def rearrange_into_author_cql(author_list, reference_number, ID):
-        full_name_list = []
-        for i in range(0, len(author_list), 2):
-            try:
-                full_name_list.append(author_list[i+1] + author_list[i])
-            except:
-                pass
-        author_cql = create_author_cql(full_name_list, 'article{}'.format(reference_number), ID)
-        return author_cql
-
-
-    template_part1 = \
-    """MERGE (article{}:Article{})
-    """
-    template_part2 = \
-    """ON CREATE SET article{}.{} = '{}'
-    """
-    template_part3 = \
-    """MERGE (article)-[:REFERENCES]->(article{})
-    """
-    ref_list
-    remove = ['ENTRYTYPE', 'author', 'title']
-    ref_cql = ''
-    for count, ref in enumerate(ref_list):
-        if 'title' in ref:
-            properties = '{title:"' + ref['title'] + '"}'
-            author_list = ref['author'].split(',')
-            filtered_ref = {key:value for key, value in ref.items() if key not in remove}
-            part_1 = template_part1.format(count, properties)
-            part_2 = ''
-            for key, value in filtered_ref.items():
-                part_2 += template_part2.format(count, key, value)
-            part_3 = template_part3.format(count)
-            ID = ref['ID']
-            author_part = rearrange_into_author_cql(author_list, count, ID)
-            ref_cql += part_1 + part_2 + part_3 + author_part
-    return ref_cql
-
-
-
-
-
-
-
-
 
